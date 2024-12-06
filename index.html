@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@100;200;300;400;500;600;700;800;900&family=Literata:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" href="./img/logo.png" type="image/x-png">
+    <title>Task Organizer</title>
+    <style>
+        body
+        {
+            background-color: #F6F6F0;
+        }
+
+        *
+        {
+            font-family: 'Literata';
+        }
+
+        h1
+        {
+            font-family: 'Playfair Display';
+            font-size: 31pt;
+            text-align: center;
+            font-weight: 900;
+        }
+
+        h2
+        {
+            font-family: 'Playfair Display';
+            color: #fcfcfa;
+            font-size: 19pt;
+            font-weight: 700;
+        }
+
+        button
+        {
+            background-color: #FFFD8C;
+            color: black;
+            text-transform: uppercase;
+            font-family: 'Jost';
+            font-weight: 400;
+            width: 175px;
+            height: 30px;
+            margin: 5px;
+            cursor: pointer;
+            border: 0;
+        }
+
+        button:hover
+        {
+            background-color: #fcfcfc;
+        }
+
+        button:focus
+        {
+            outline: none;
+        }
+
+        main
+        {
+            background-color: #561331;
+            width: 75vw;
+            height: 75vh;
+            margin: auto;
+            padding: 15px;
+        }
+
+        select
+        {
+            color: black;
+        }
+
+        select:focus
+        {
+            outline: none;
+        }
+
+        input:focus
+        {
+            outline: none;
+        }
+
+        input, select
+        {
+            font-size: 12pt;
+        }
+
+        li
+        {
+            font-family: 'Literata';
+            font-size: 12pt;
+            color: #fcfcfc;
+        }
+
+        li input
+        {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Organizer</h1>
+    <main>
+        <h2>Add or Remove Tasks:</h2>
+        <p><input type="text" id="taskName" placeholder="Task Name"></p>
+        <p><select id="operation">
+            <option disabled selected value="disabled">Select a operation</option>
+            <option value="add">Add</option>
+            <option value="remove">Remove</option>
+        </select></p>
+        <p><button onclick="buttonClick();">Send</button> <button onclick="removeAllTasks();">Remove all tasks</button></p>
+        <h2>Tasks:</h2>
+        <ul id="tasksList"></ul>
+    </main>
+    <script>
+        // Cria lista de tarefas
+        var tasksList = [];
+
+        // Quando a pagina carregar
+        window.onload = function()
+        {
+            // Verifica se nao existe nenhuma lista de tarefas previamente salvada no localStorage
+            if (!window.localStorage.tasksList) return;
+            
+            // Converte lista de tarefas escrita em localStorage grammar do localStorage, para a sintaxe do JavaScript
+            tasksList = rescueTasksList();
+
+            // Localiza elemento HTML da lista de tarefas no codigo HTML do documento
+            var tasksListHTML = document.getElementById("tasksList");
+
+            // Para cada tarefa da lista de tarefas
+            for (var i = 0; i < tasksList.length; i++)
+            {
+                // Cria tag <li>
+                var li = document.createElement("li");
+
+                // Define id
+                li.id = tasksList[i].name;
+
+                // Adiciona mais codigo HTML dentro da tag <li> dependendo se a checkbox foi preenchida ou nao
+                li.innerHTML = `<input type=\"checkbox\" id=\"${tasksList[i].name}\" ${tasksList[i].checked? "checked": ""}> ${tasksList[i].name}`;
+
+                // Se a checkbox esta checada, adicionar CSS a tag <li>
+                if (tasksList[i].checked) li.style.textDecoration = "line-through";
+
+                // Adiciona evento de clique na tag <li>
+                li.onclick = function(event)
+                {
+                    // Para cada tarefa
+                    for (var i = 0; i < tasksList.length; i++)
+                    {
+                        // Se encontrei a minha propia tarefa
+                        if (tasksList[i].name === event.target.id)
+                        {
+                            // Atualiza propiedade checked
+                            tasksList[i].checked = event.target.checked;
+
+                            // Checa se estou checado
+                            if (tasksList[i].checked)
+                            {
+                                // Aplica CSS
+                                this.style.textDecoration = "line-through";
+                            }
+                            else
+                            {
+                                // Aplica CSS
+                                this.style.textDecoration = "none";
+                            }
+
+                            // Salva (ou atualiza) lista de tarefas no localStorage
+                            save(tasksList);
+                        }
+                    }
+                }
+
+                // Adiciona tag <li> a lista de tarefas do HTML
+                tasksListHTML.appendChild(li);
+            }
+        }
+
+        function buttonClick()
+        {
+            // Localiza elementos HTMLs do nome da tarefa, tipo de operacao, e lista de tarefas
+            var taskName = document.getElementById("taskName");
+            var operation = document.getElementById("operation");
+            var tasksListHTML = document.getElementById("tasksList");
+
+            // Se o nome da tarefa estiver vazio, ou a operacao tem valor string "disabled", retorna mensagem para o usuario
+            if (!taskName.value.trim() && operation.value === "disabled") return window.alert("Please, write the name of the task and select a mode of operation.");
+            if (!taskName.value.trim()) return window.alert("Please, write the name of the task.");
+            if (operation.value === "disabled") return window.alert("Please, select a mode of operation.");
+
+            // Se o modo da operacao for de adicionar
+            if (operation.value === "add")
+            {
+                // Verifica cada tarefa
+                for (var i = 0; i < tasksList.length; i++)
+                {
+                    // Se o nome da tarefa for o mesmo do digitado, retorna mensagem para o usuario
+                    if (tasksList[i].name === taskName.value.trim()) return window.alert("Please, write a different task.");
+                }
+
+                // Salva tarefa na lista de tarefas
+                tasksList.push({
+                    name: taskName.value.trim(),
+                    checked: false
+                });
+
+                // Cria tag <li>
+                var li = document.createElement("li");
+
+                // Define id na tag <li>
+                li.id = taskName.value.trim();
+
+                // Adiciona check box dentro da tag <li>
+                li.innerHTML = `<input type=\"checkbox\" id=\"${taskName.value.trim()}\"> ${taskName.value.trim()}`;
+
+                // Adiciona evento de clique na tag <li>
+                li.onclick = function(event)
+                {
+                    // Para cada tarefa
+                    for (var i = 0; i < tasksList.length; i++)
+                    {
+                        // Se encontrei a minha propia tarefa
+                        if (tasksList[i].name === event.target.id)
+                        {
+                            // Atualiza propiedade checked
+                            tasksList[i].checked = event.target.checked;
+
+                            // Checa se estou checado
+                            if (tasksList[i].checked)
+                            {
+                                // Aplica CSS
+                                this.style.textDecoration = "line-through";
+                            }
+                            else
+                            {
+                                // Aplica CSS
+                                this.style.textDecoration = "none";
+                            }
+
+                            // Salva (ou atualiza) lista de tarefas no localStorage
+                            save(tasksList);
+                        }
+                    }
+                }
+                
+                // Salva (ou atualiza) lista de tarefas no localStorage
+                save(tasksList);
+
+                // Adiciona a tag <li> a lista de tarefas e retorna
+                return tasksListHTML.appendChild(li);
+            }
+            // Se o modo da operacao for de remover
+            else
+            {
+                // Verifica cada tarefa
+                for (var i = 0; i < tasksList.length; i++)
+                {
+                    // Se o nome da tarefa for o mesmo do digitado, deleta a tarefa e retorna mensagem ao usuario
+                    if (tasksList[i].name === taskName.value.trim())
+                    {
+                        // Deleta a tarefa da lista de tarefas
+                        tasksList.splice(i, 1);
+
+                        // Deleta a tarefa da lista de tarefas no HTML
+                        document.getElementById(taskName.value.trim()).remove();
+
+                        // Salva (ou atualiza) lista de tarefas no localStorage
+                        save(tasksList);
+
+                        return window.alert("Task sucessfully deleted.");
+                    }
+                }
+
+                // Se chegamos aqui, a tarefa nao foi encontrada
+                // Retorna mensagem ao usuario
+                return window.alert("Task wasn\'t found.");
+            }
+        }
+
+        // Funcao que remove todas as tarefas
+        function removeAllTasks()
+        {
+            // Localiza lista de tarefas no HTML
+            var tasksListHTML = document.getElementById("tasksList");
+
+            // Apaga todo conteudo da lista de tarefas do HTML
+            tasksListHTML.innerHTML = "";
+
+            // Deixa a lista de tarefas vazia
+            tasksList = [];
+
+            // Apaga lista de tarefas do localStorage (mesmo que ela nao exista, ainda sim nao da nenhum erro) e retorna
+            return delete window.localStorage.tasksList;
+        }
+
+        // Funcao que salva lista de tarefas no localStorage
+        function save(tasksList)
+        {
+            // Sintaxe da lista de tarefas no localStorage:
+            // tarefa1|feita/tarefa2|naofeita/tarefa3|feita
+
+            // Cria variavel que representa a lista que vai ser convertida na minha gramatica carinhosamente apelidada de "localStorage grammar"
+            // Depois posso resgatar a lista e seus dados com RegExp
+            var taskListLocalStorage = "";
+
+            for (var i = 0; i < tasksList.length; i++)
+            {
+                taskListLocalStorage += `${tasksList[i].name}|${tasksList[i].checked}/`;
+            }
+
+            // Usa expressao regular para identificar a ultima barra do texto, e apaga-la por ser desnecessaria por nao ter mais nenhum item a frente
+            taskListLocalStorage = taskListLocalStorage.replace(/\/(?!.*\/)/, "");
+
+            // Salva lista escrita em localStorage grammar no localStorage e retorna
+            return window.localStorage.tasksList = taskListLocalStorage;
+        }
+
+        // Funcao que converte lista de tarefas escrita em localStorage grammar para sintaxe do javascript
+        function rescueTasksList()
+        {
+            // Pega lista de tarefas escrita em localStorage grammar do localStorage
+            var localStorageTasksList = window.localStorage.tasksList;
+
+            // Divide o texto em arrays com strings que foram separadas por barras
+            // Por exemplo, minha lista de tarefas em localStorage grammar e: comer|true/tomar banho|false
+            // Depois da linha de codigo, meu texto se torna um array assim: ["comer|true", "tomar banho|false"]
+            localStorageTasksList = localStorageTasksList.split(/[/]/g);
+
+            // Para cada elemento do array (futura tarefa)
+            for (var i = 0; i < localStorageTasksList.length; i++)
+            {
+                // O elemento atual (string) e dividido em parte pelo delimitador "|" e se torna um array
+                // Exemplo, meu array atual e: ["comer|true", "tomar banho|false"]
+                // Depois da linha de codigo, o array fica assim: [["comer", "true"], ["tomar banho", "false"]]
+                localStorageTasksList[i] = localStorageTasksList[i].split(/[|]/g);
+
+                // O elemento atual (array) e transformado em um objeto e suas propiedades "name" e "checked" sao representadas pelos elementos do elemento atual
+                localStorageTasksList[i] = {
+                    name: localStorageTasksList[i][0], // name: "comer"
+                    // Ja que os valores booleanos true e false sao representados como strings na localStorage grammar, entao se usa a funcao eval() para tratar strings como expressoes
+                    checked: eval(localStorageTasksList[i][1]) // checked: true
+                };
+            }
+
+            // Retorna lista de tarefas convertida de localStorage grammar para a sintaxe do JavaScript
+            return localStorageTasksList;
+        }
+    </script>
+</body>
+</html>
